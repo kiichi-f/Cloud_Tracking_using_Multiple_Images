@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
-
-
 import glob
 import netCDF4
 import numpy    as np
@@ -17,18 +14,47 @@ import itertools
 import datetime
 from tqdm import tqdm
 
-
-# In[2]:
-
-
 def my_makedirs(path):
+    """
+    ディレクトリを作成する
+
+    Parameters
+    ----------
+    path : str
+        作成したいディレクトリのパス
+    """
     if not os.path.isdir(path):
         os.makedirs(path)
 
 def getObservationTime(path):
+    """
+    ファイル名から観測時刻を取得する
+    ファイル名の例：lir_20180410_065012_pic_l3c_v20190401.nc
+
+    Parameters
+    ----------
+    path : str
+        対象となるnetCDF4ファイルのパス
+
+    Returns
+    -------
+        '%Y%m%d_%H%M%S'形式の時刻
+    """
     return datetime.datetime.strptime(path[-36:-21],'%Y%m%d_%H%M%S')
 
 def mean_angle(angles):
+    """
+    複数の角度の平均を計算する
+
+    Parameters
+    ----------
+    angles : list
+        度数法で記された角度のリスト
+
+    Returns
+    -------
+        度数法で記された角度の平均
+    """
     vec = lambda a : np.cos(2*np.pi*a/360)+np.sin(2*np.pi*a/360)*1j
     m_angle = np.angle(np.array(list(map(vec,angles))).mean())*180/np.pi
     if m_angle>0:
@@ -37,17 +63,49 @@ def mean_angle(angles):
         return m_angle+360
 
 def high_pass_filtering(img,size=81):
+    """
+    cv2.GaussianBlurを用いたハイパス処理
+
+    Parameters
+    ----------
+    img : ndarray
+        緯度経度展開された輝度温度マップ
+    size : 2*int+1
+        取り出したい構造の大きさを決めるパラメーター
+        デフォルトではsize=81であり、1440x720の輝度温度マップでは81/720*180~20度以下の構造を強調する。
+
+    Returns
+    -------
+        ハイパス処理された輝度温度マップ
+    """
     kernel_size = (size,size)
     highPassFilter = lambda img : img - cv2.GaussianBlur(img, kernel_size,0)
     mask           = lambda img : ma.masked_greater(ma.masked_less(img,-10),10)
     return mask(highPassFilter(img))
 
-'''
-メモリ負荷削減のため、相互相関に用いる1つのグループごとにncファイルの読み込みを行う
-そのために特定の時間間隔で撮影されたN個以上の連番を取り出し、グループ化する
-'''
 def getSequencesGroup(ncFileList,mimGroupSize = 7,intervaltime = 3600,buffer_rate_min = 0.8,buffer_rate_max = 1.2):
+    """
+    時間的に連続した輝度温度マップを特定の枚数、時間間隔ごとにグルーピングする。
+    画像を重ね合わせ、雲追跡を行って各地点で1つの風速を求めるための一連の画像群になる。
 
+    Parameters
+    ----------
+    ncFileList : list
+        対象の輝度温度マップがあるパスのリスト
+    mimGroupSize : int
+        最小のグループサイズ
+    intervaltime : int (second)
+        グループ内の時間間隔（の目安）デフォルトでは1時間となっており、1時間を大きく超える撮影間隔の連続した2枚の画像は、同じグループに属さない。
+        1時間を大きく下回る撮影間隔の2枚の画像があったら、後に撮影された画像は用いない。
+    buffer_rate_min : double (0~1)
+        intervaltime*buffer_rate_minがグループ内連続した画像の最小許容時間間隔となる。
+    buffer_rate_max : double (>1)
+        intervaltime*buffer_rate_maxがグループ内連続した画像の最大許容時間間隔となる。
+    Returns
+    -------
+    seqencesGroup : list of list
+        対象の輝度温度マップがあるパスのリストをグループ分けしたもの len(seqencesGroup)=雲追跡を行う画像グループ数
+    """
     listObservationTime = list( map( getObservationTime, ncFileList))
 
     obsInterval = np.array(listObservationTime)-np.roll(listObservationTime,1) #N番目：(N-1)とNの間隔、0番目：最初と最後の間隔
