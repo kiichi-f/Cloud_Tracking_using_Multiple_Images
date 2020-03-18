@@ -86,7 +86,7 @@ def high_pass_filtering(img,size=81):
 def getSequencesGroup(ncFileList,mimGroupSize = 7,intervaltime = 3600,buffer_rate_min = 0.8,buffer_rate_max = 1.2):
     """
     時間的に連続した輝度温度マップを特定の枚数、時間間隔ごとにグルーピングする。
-    画像を重ね合わせ、雲追跡を行って各地点で1つの風速を求めるための一連の画像群になる。
+    1グループ内の画像は、画像を重ね合わせ、雲追跡を行って各地点で1つの風速を求めるための一連の画像群になる。
 
     Parameters
     ----------
@@ -104,7 +104,7 @@ def getSequencesGroup(ncFileList,mimGroupSize = 7,intervaltime = 3600,buffer_rat
     Returns
     -------
     seqencesGroup : list of list
-        対象の輝度温度マップがあるパスのリストをグループ分けしたもの len(seqencesGroup)=雲追跡を行う画像グループ数
+        ncFileListをグループ分けしたもの。内側のリストには画像のパスではなく、ncFileListにおける画像の番号が格納されている。 len(seqencesGroup)=雲追跡を行う画像グループ数
     """
     listObservationTime = list( map( getObservationTime, ncFileList))
 
@@ -137,6 +137,28 @@ def getSequencesGroup(ncFileList,mimGroupSize = 7,intervaltime = 3600,buffer_rat
 # In[3]:
 
 def getAveragedObservationData(ncFileList,sequences,plot=False):
+    """
+    複数枚の画像を背景東西風と共に動く座標系で重ね合わせる。ncFileListとsequencesで指定した全ての画像を用いるのではなく、
+    ncFileListとsequencesで指定した用いる可能性のある画像のうち金星により近い連続した12枚の画像から連続した4枚の画像を重ね合わせ、
+    計9枚の重ねた画像および撮影時刻や距離の平均を計算する。
+
+    TODO：背景東西風の緯度分布を外部パラメーターにする。
+
+    Parameters
+    ----------
+    ncFileList : list
+        対象の輝度温度マップがあるパスのリスト
+    sequences　: int
+        ncFileListのうち、重ね合わせに用いる可能性のある画像の番号
+    plot : bool
+        Trueならば重ね合わせた画像を描画
+
+    Returns
+    -------
+    averaged_observations : list of dict
+        平均後の画像および撮影時刻や距離の平均などを格納したdictのリスト
+
+    """
     # u_angle  = np.array([ 80.        ,  80.01218624,  80.04876354,  80.10978768,
     #         80.19535185,  80.305587  ,  80.44066237,  80.60078604,
     #         80.7862058 ,  80.99721006,  81.23412895,  81.4973356 ,
@@ -222,9 +244,9 @@ def getAveragedObservationData(ncFileList,sequences,plot=False):
 
     averaged = lambda key,j :sum([observations[i][key] for i in range(0+j,4+j)])/4
     averaged_observations = []
-    '''
-    SR座標系におけるsubsolar_longtitudeも計算するが、個々の重ね合わせ画像の平均ではなく、12枚のsequences全部の平均を計算する
-    '''
+
+    #SR座標系におけるsubsolar_longtitudeも計算するが、個々の重ね合わせ画像の平均ではなく、12枚のsequences全部の平均を計算する
+
 
     subsolar_SRlongtitude = mean_angle(SR_subsolar_longtitudes)
 
@@ -276,6 +298,21 @@ def getAveragedObservationData(ncFileList,sequences,plot=False):
 
 #画像が端で切れているとright<leftと逆転して返す
 def imageLocation(img):
+    """
+    画像の緯度、経度方向の端を見つける（テンプレートエリア、サーチエリアを設定する際に用いる）
+    緯度経度マップに展開された時、写っていない緯度経度領域はmaskされていることを用いている。
+
+    Parameters
+    ----------
+    img : ndarray
+        緯度経度展開された輝度温度マップ
+
+    Returns
+    -------
+    left,right,top,bottom : int,int,int,int
+        画像の左(西)、右(東)、上(北)、下(南)端のピクセル番地
+    """
+
 #     print(np.arange(start=0,stop=img[360].size)[img[360].mask==False])
     if img[360].mask[0]==True: #画像が端で切れていない
         try:
