@@ -7,6 +7,17 @@ import glob
 from tqdm import tqdm
 
 def plotFitedEllipse(ccmap,detected_ellipses):
+    """
+    相関曲面の上位1、5、10パーセントの値の等高線にフィッテイングした楕円と最大値を描画する
+
+    関数中の1.637という数字は1m/sで動く構造が12時間隔てたLIR画像間で移動するおおよその距離をピクセル単位で表したもの。
+    以下、ピクセル移動速度と実際の移動速度の換算
+
+    - 金星半径6051kmとして赤道では1周2pi6051km を1440ピクセルで表現している
+    - 1 pixelあたり26.389km
+    - 1 pixel/12h = 26.389km/12h = 0.61 m/s
+    - 1 m/s = 1.637 pixel/12h
+    """
 
     #変数名シノニムを作るのではなく新たにメモリを確保
     ccmap_add_fitted_ellipse =  np.copy(ccmap)
@@ -58,6 +69,10 @@ def plotFitedEllipse(ccmap,detected_ellipses):
 
 
 def recoedFitedEllipse(ccmap,detected_ellipses=[],threshold = 99):
+    """
+    相関曲面の上位1、5、10パーセントの値の等高線に対して行なった楕円フィッテイングの結果（座標、長軸の大きさ、傾き、等高線の値）をまとめる
+    """
+
     upper_ = lambda ccmap,parcent : np.sort(ccmap.reshape((1,np.array(ccmap).size)))[0][int(parcent/100.*np.array(ccmap).size)]
      #輪郭検出のための前処理：2値化
     _, binaryMap = cv2.threshold(ccmap,upper_(ccmap,threshold),1,cv2.THRESH_BINARY)
@@ -80,8 +95,12 @@ def recoedFitedEllipse(ccmap,detected_ellipses=[],threshold = 99):
 
     return detected_ellipses
 
-#最大となるUV
 def maxUV_SR(ccmap):
+    """
+    相関曲面で最大となる風速を計算する。
+    内部パラメータ85は、相関曲面上の座標と実際の風速を換算する値であり、テンプレートエリアとサーチエリアと比較した画像の時間間隔に依存した値（要改善）
+    """
+
     maxPiY,maxPiX = np.argmax(ccmap)//ccmap.shape[1],np.argmax(ccmap)%ccmap.shape[1]
     #2*7*12+1 == 84+1+84
     U,V = (maxPiX-85)/1.637,-(maxPiY-85)/1.637
@@ -90,12 +109,9 @@ def maxUV_SR(ccmap):
 if __name__ == '__main__':
 
     # orbit番号で指定。グループ番号はfor文で回す
-    #orbits = [101]
-    # orbits = [99,100,101,102]
     orbits = [i for i in range(79,80,1)]
     row = []
     for orbit in orbits:
-        # target_dir = '/Users/kiichi/Desktop/orbit'+'{0:04d}'.format(orbit)
         target_dir = './output/orbit'+"{0:04d}".format(orbit)+'/'
 
         for subDir in sorted(glob.glob(target_dir+'/??')):
@@ -104,9 +120,7 @@ if __name__ == '__main__':
 
                 with open(pathSummary,'rb') as f:
                     dfSummary = pickle.load(f)
-                '''
-                subsolar_longtitudeが地理座標系になっているので変更する
-                '''
+
                 _, groupNum, time_begin, _, distance_mean, _, _, subsolar_SRlongtitude, _, _, _ = np.array(dfSummary)[0]
                 print(groupNum, time_begin, distance_mean, subsolar_SRlongtitude)
 
@@ -168,4 +182,3 @@ if __name__ == '__main__':
 
         #         print(cY,cLAT,cLT,u,v)
         #         print(d99,d95,d90)#を使って特徴量抽出を行う
-        # /Users/kiichi/Desktop/orbit0101/00/refarencesImagesSummary_orbit0101_mimGroupSize6_groupNum0.csv

@@ -659,13 +659,11 @@ def summerizeReferencedImages(orbit,observations,num_observations):
             pickle.dump(df , f, protocol=2)
     return
 
-
+# orbit番号で指定。グループ番号はfor文で回す
 orbits = [i for i in range(79,80,1)]
 for orbit in orbits :
     print('orbit='+str(orbit))
-    # path = '/Users/kiichi/Google Drive/akatsuki/191030toMac/data/r'+"{0:04d}".format(orbit)+'/*.nc'
     path = 'input/r'+"{0:04d}".format(orbit)+'/*.nc'
-    # tempdir =  '/Users/kiichi/Desktop/orbit'+"{0:04d}".format(orbit)+'/'
     tempdir = './output/orbit'+"{0:04d}".format(orbit)+'/'
     my_makedirs(tempdir)
     ncFileList = sorted(glob.glob(path))
