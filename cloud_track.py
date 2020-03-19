@@ -133,9 +133,6 @@ def getSequencesGroup(ncFileList,mimGroupSize = 7,intervaltime = 3600,buffer_rat
 
     return seqencesGroup
 
-
-# In[3]:
-
 def getAveragedObservationData(ncFileList,sequences,plot=False):
     """
     複数枚の画像を背景東西風と共に動く座標系で重ね合わせる。ncFileListとsequencesで指定した全ての画像を用いるのではなく、
@@ -222,8 +219,8 @@ def getAveragedObservationData(ncFileList,sequences,plot=False):
 
 
         interval_second = (time-initial_time).days*24*3600+(time-initial_time).seconds
-    #     print( displacement_pixcel(interval_second) )
-#         rolled_img = np.roll(img,displacement_pixcel(interval_second), axis=1)
+        # print( displacement_pixcel(interval_second) )
+        # rolled_img = np.roll(img,displacement_pixcel(interval_second), axis=1)
 
         displacement_pixcel = lambda U_background,interval_second : int(U_background / 100. * 360 / (2 * np.pi * 6050 / 1440) * interval_second/3600.)
         rolled_img = np.array([np.roll(strip,displacement_pixcel(U,interval_second)) for strip,U in zip (img,wind_speeds)])
@@ -292,15 +289,11 @@ def getAveragedObservationData(ncFileList,sequences,plot=False):
 #     fig.tight_layout()
 #     return
 
-
-# In[4]:
-
-
 #画像が端で切れているとright<leftと逆転して返す
 def imageLocation(img):
     """
     画像の緯度、経度方向の端を見つける（テンプレートエリア、サーチエリアを設定する際に用いる）
-    緯度経度マップに展開された時、写っていない緯度経度領域はmaskされていることを用いている。
+    緯度経度マップに展開されたとき、写っていない緯度経度領域はmaskされていることを用いている。
 
     Parameters
     ----------
@@ -313,7 +306,7 @@ def imageLocation(img):
         画像の左(西)、右(東)、上(北)、下(南)端のピクセル番地
     """
 
-#     print(np.arange(start=0,stop=img[360].size)[img[360].mask==False])
+    # print(np.arange(start=0,stop=img[360].size)[img[360].mask==False])
     if img[360].mask[0]==True: #画像が端で切れていない
         try:
             left = np.arange(start=0,stop=img[360].size)[img[360].mask==False][0]
@@ -344,6 +337,29 @@ def imageLocation(img):
 
 def sizeOfSearchArea_for_SRcoordinate(delta_hour=None,size_templateX=None,size_templateY=None,
                                                                 max_displacementXperHour=7,max_displacementYperHour=7):
+    """
+    サーチエリアの大きさを決定する＠背景東西風固定座標
+    サーチエリアの中心はテンプレートエリアの中心と一致する前提（地形固定座標系では雲構造は基本的に西に流れるので不適）
+
+    Parameters
+    ----------
+    delta_hour : int
+        比較する2枚の画像の撮影時間間隔
+    size_templateX : int
+        テンプレートエリアの大きさ（経度方向、単位はピクセル）
+    size_templateY : int
+        テンプレートエリアの大きさ（緯度方向、単位はピクセル）
+    max_displacementXperHour : int
+        想定する1時間あたりの最大移動量（経度方向、単位はピクセル）
+    max_displacementYperHour : int
+        想定する1時間あたりの最大移動量（経度方向、単位はピクセル）
+
+    Returns
+    -------
+    (size_serchX,size_serchY) : (int,int)
+        サーチエリアのサイズ（単位はピクセル）
+    """
+
     max_displacementX = max_displacementXperHour*delta_hour
     max_displacementY = max_displacementYperHour*delta_hour
     size_serchX = 2*max_displacementX+size_templateX
@@ -352,18 +368,34 @@ def sizeOfSearchArea_for_SRcoordinate(delta_hour=None,size_templateX=None,size_t
 
 def listTemplateCenter(img,max_delta_hour=None,size_templateX=None,size_templateY=None,
                        max_displacementXperHour=7,max_displacementYperHour=7):
-
     """
-    - 東西、南北風速場測定範囲：-50 ~ +50 m/s
-        - pixcel換算で `-7 *delta_hour`~`+7 *delta_hour`
+    テンプレートエリアの中心となる座標を決定する
 
-    - テンプレートはもっと極域に伸ばせるかもしれない
+    Parameters
+    ----------
+    img : ndarray
+        緯度経度展開された輝度温度マップ
+    max_delta_hour : int
+        比較する2枚の画像の最大撮影時間間隔
+    size_templateX : int
+        テンプレートエリアの大きさ（経度方向、単位はピクセル）
+    size_templateY : int
+        テンプレートエリアの大きさ（緯度方向、単位はピクセル）
+    max_displacementXperHour : int
+        想定する1時間あたりの最大移動量（経度方向、単位はピクセル）
+    max_displacementYperHour : int
+        想定する1時間あたりの最大移動量（経度方向、単位はピクセル）
+
+    Returns
+    -------
+    list(itertools.product(cX, cY)) : list
+        テンプレートエリアの中心座標のリスト
     """
 
     left,right,top,bottom = imageLocation(img)
     size_serchX,size_serchY = sizeOfSearchArea_for_SRcoordinate(max_delta_hour,size_templateX,size_templateY)
-#     print( size_serchX,size_serchY)
-#     まずは緯度方向
+    # print( size_serchX,size_serchY)
+    # まずは緯度方向
     c00y= top + size_serchY/2
     cY = []
     N = 0
@@ -371,7 +403,7 @@ def listTemplateCenter(img,max_delta_hour=None,size_templateX=None,size_template
         cY += [c00y + size_templateY/2 * N]
         N += 1
 
-    #画像が端にまたがっていない場合
+    # 画像が端にまたがっていない場合
     if left<right:
         c00x= left + size_serchX/2
         cX = []
@@ -380,7 +412,7 @@ def listTemplateCenter(img,max_delta_hour=None,size_templateX=None,size_template
             cX += [c00x + size_templateX/2 * N]
             N += 1
 
-    #画像が端にまたがっている場合
+    # 画像が端にまたがっている場合
     else:
         c00x= 0 + size_serchX/2
         cX = []
@@ -397,25 +429,62 @@ def listTemplateCenter(img,max_delta_hour=None,size_templateX=None,size_template
     return list(itertools.product(cX, cY))
 
 def plotCenters(img,centers):
+        """
+        テンプレートエリアの中心となる座標を決定する
+
+        Parameters
+        ----------
+        img : ndarray
+            緯度経度展開された輝度温度マップ
+        centers : list
+            テンプレートエリアの中心座標のリスト
+        """
     plt.scatter(np.array(centers).T[0],np.array(centers).T[1])
     plt.imshow(img)
     plt.show()
     return
 
-
-# In[5]:
-
-
-#相関係数を求める
 def subCCmapMatrix(observations,templateCenter,num_observations,size_templateX=None,size_templateY=None):
+        """
+        相関曲面の計算
+
+        1.  入力した重ね合わせた観測画像群から選んだ任意の2枚の相関曲面を全て計算する。
+            ただし、重ね合わせに用いた画像が被ったペアは計算しない。
+
+        2.  得られた全相関曲面を、同じ時間間隔ごとに平均。その後に各時間間隔で平均された画像をさらに平均
+            (Ikegawa & Horinouchi 2016)
+
+        デフォルトでは12枚の元画像から4枚づつ移動平均を行なって得られた9枚の画像を入力としている。（それ以外のパラメータでの動作は確認していない）
+
+        Parameters
+        ----------
+        observations : list of ndarray
+            緯度経度展開された輝度温度マップ
+        templateCenter : list
+            テンプレートエリアの中心座標のリスト
+        num_observations : int
+            重ね合わせに用いる元画像の数（12に固定）
+        size_templateX : int
+            テンプレートエリアの大きさ（経度方向、単位はピクセル）
+        size_templateY : int
+            テンプレートエリアの大きさ（緯度方向、単位はピクセル）
+
+        Returns
+        -------
+        subMapList : list of ndarray
+            全相関曲面のリスト（手順1の結果）
+        ccmap : ndarray
+            最終的に得られた平均後相関曲面のリスト（手順2の結果）
+        """
+
     cX,cY = templateCenter
-    #subMapsMatrixを作成
+    # subMapsMatrixを作成
     subMapList =  [ [ [] for i in range(5)] for j in range(5)]
 
     for delta in range(4,10):
         for num1 in range(9-delta):
             num2 = num1 + delta
-    #         print(num2)
+            # print(num2)
             #早い時刻に撮影されたもの
             templateObservation = observations[num1]['img']
             #遅い時刻に撮影されたもの
@@ -428,24 +497,14 @@ def subCCmapMatrix(observations,templateCenter,num_observations,size_templateX=N
             templateImg = observations[num1]['img'][int(cY-size_templateY/2):int(cY+size_templateY/2),
                                                                           int(cX-size_templateX/2):int(cX+size_templateX/2)]
 
-            #右端はテンプレートの右端に合わせる：書き方が汚いので変えたい
+            #右端はテンプレートの右端に合わせる
             searchImg = observations[num2]['img'][int(cY-size_searchY/2):int(cY+size_searchY/2),
                                                                        int(cX-size_searchX/2):int(cX+size_searchX/2)]
-
-            """
-            何もしなければcc_submap 00 には displacements_x[0]=もっとも右方向にシフト（u最小）、
-            displacements_y[0]=もっとも下方向にシフトしたもの（v最小）が入る
-            → u軸は左から右(正)、v軸は上から下（逆）
-            →最初からu,vの軸を正しいものに置き換えておく
-            """
-    #         cc_submap = cv2.matchTemplate(searchImg, templateImg, cv2.TM_CCOEFF_NORMED)
 
             cc_submap = cv2.resize(cv2.matchTemplate(searchImg, templateImg, cv2.TM_CCOEFF_NORMED),
                                            (2*7*12+1,2*7*12+1))[::-1,:]
 
             subMapList[num1][num2-4] += [cc_submap]
-
-
 
     for delta in range(4,10):
         arr = np.zeros_like(subMapList[0][0][0])
@@ -477,24 +536,10 @@ def subCCmapMatrix(observations,templateCenter,num_observations,size_templateX=N
 
     return subMapList,ccmap
 
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[6]:
-
-
-#描画
 def plotSubCCmapMatrix(subMapList,savePath=None):
+    """
+    全相関曲面の描画
+    """
     fs = 12
     fs2=14
 
@@ -520,6 +565,17 @@ def plotSubCCmapMatrix(subMapList,savePath=None):
     return
 
 def plotCCmap(ccmap,savePath=None):
+    """
+    1つの相関曲面の描画
+
+    関数中の1.637という数字は1m/sで動く構造が12時間隔てたLIR画像間で移動するおおよその距離をピクセル単位で表したもの。
+    以下、ピクセル移動速度と実際の移動速度の換算
+
+    - 金星半径6051kmとして赤道では1周2pi6051km を1440ピクセルで表現している
+    - 1 pixelあたり26.389km
+    - 1 pixel/12h = 26.389km/12h = 0.61 m/s
+    - 1 m/s = 1.637 pixel/12h
+    """
     fs = 22
     fs2= 24
 
@@ -553,7 +609,7 @@ def plotCCmap(ccmap,savePath=None):
 
     plt.tight_layout()
     plt.savefig(savePath)
-#     plt.show()
+    # plt.show()
 
     plt.clf()
     plt.cla()
@@ -561,10 +617,10 @@ def plotCCmap(ccmap,savePath=None):
     return
 
 
-# In[7]:
-
-
 def saveCCmapInfp(orbit,num_observations,groupNum,row,tempdir):
+    """
+    相関曲面に関連する情報をpickle形式で保存
+    """
     header = ['savePath','center','SorcePaths']
     name = 'ccmapInfo_orbit'+'{0:04d}'.format(orbit)+'_mimGroupSize'+str(num_observations)+'_groupNum'+str(groupNum)
     df = pd.DataFrame(row,columns=header)
@@ -574,8 +630,11 @@ def saveCCmapInfp(orbit,num_observations,groupNum,row,tempdir):
             pickle.dump(df , f, protocol=2)
     return
 
-#重ね合わせに使った画像の撮影状況のサマリー
 def summerizeReferencedImages(orbit,observations,num_observations):
+    """
+    重ね合わせに使った画像に関連する情報をpickle形式で保存
+    """
+
     distances,times,ss_SRlons,ss_lons,ak_lons,ak_lt = np.array(list(map(lambda di :list(di.values())[1:], observations[:num_observations]))).T
 
     row = [ [ orbit,
@@ -601,9 +660,6 @@ def summerizeReferencedImages(orbit,observations,num_observations):
     return
 
 
-# In[8]:
-
-
 orbits = [i for i in range(79,80,1)]
 for orbit in orbits :
     print('orbit='+str(orbit))
@@ -623,8 +679,8 @@ for orbit in orbits :
     sequencesGroup=getSequencesGroup(ncFileList,mimGroupSize = num_observations,intervaltime = 3600,buffer_rate_min = 0.8,buffer_rate_max = 1.2)
 #     print(sequencesGroup)
 
-    for groupNum,selectedGroup in enumerate([sequencesGroup[0]]):
-    # for groupNum,selectedGroup in enumerate(sequencesGroup):
+    # for groupNum,selectedGroup in enumerate([sequencesGroup[0]]):
+    for groupNum,selectedGroup in enumerate(sequencesGroup):
         observations = getAveragedObservationData(ncFileList,selectedGroup,plot=False)
 
         templateCenters = listTemplateCenter(observations[0]['img'],
@@ -659,12 +715,3 @@ for orbit in orbits :
         summerizeReferencedImages(orbit,observations,num_observations)
 
         # break
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
