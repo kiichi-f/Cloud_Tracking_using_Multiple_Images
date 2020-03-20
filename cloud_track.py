@@ -14,6 +14,63 @@ import itertools
 import datetime
 from tqdm import tqdm
 
+def main():
+    # orbit番号で指定。グループ番号はfor文で回す
+    orbits = [i for i in range(79,80,1)]
+    for orbit in orbits :
+        print('orbit='+str(orbit))
+        path = 'input/r'+"{0:04d}".format(orbit)+'/*.nc'
+        tempdir = './output/orbit'+"{0:04d}".format(orbit)+'/'
+        my_makedirs(tempdir)
+        ncFileList = sorted(glob.glob(path))
+
+        size_templateX=4*20
+        size_templateY=4*20
+        #一回の相関マップ重ね合わせに使う画像の枚数
+        num_observations = 12
+
+        #特定の時間間隔で連続して撮影されている画像番号を出力
+        sequencesGroup=getSequencesGroup(ncFileList,mimGroupSize = num_observations,intervaltime = 3600,buffer_rate_min = 0.8,buffer_rate_max = 1.2)
+    #     print(sequencesGroup)
+
+        for groupNum,selectedGroup in enumerate([sequencesGroup[0]]):
+        # for groupNum,selectedGroup in enumerate(sequencesGroup):
+            observations = getAveragedObservationData(ncFileList,selectedGroup,u_angle,plot=False)
+
+            templateCenters = listTemplateCenter(observations[0]['img'],
+                                                 max_delta_hour=8, #重ね合わせているので最大時間幅は12-2*2時間
+                                                 size_templateX=size_templateX,
+                                                 size_templateY=size_templateY)
+
+            my_makedirs(tempdir+'{0:02d}'.format(groupNum))
+
+            #付属情報保存用
+            row = []
+            for templateCenter in tqdm(templateCenters):
+                savePath = lambda flag : tempdir+'{0:02d}'.format(groupNum)+'/'+flag+str(templateCenter)
+
+                subMapList,ccmap = subCCmapMatrix(observations,templateCenter,num_observations,
+                                                             size_templateX=size_templateX,
+                                                             size_templateY=size_templateY,
+                                                             savePath = savePath('ccmap')+'.pickle')
+
+
+                plotSubCCmapMatrix(subMapList,savePath=savePath('sub')+'.jpg' )
+                plotCCmap(ccmap,savePath = savePath('cc')+'.jpg')
+
+                #CSVで付属情報の保存
+                paths = [ncFileList[index] for index in [selectedGroup[i] for i in range(num_observations) ] ]
+                row += [ [savePath('cc')+'.jpg',
+                          templateCenter,
+                          paths] ]
+
+                # break
+
+            saveCCmapInfp(orbit,num_observations,groupNum,row,tempdir)
+            summarizeReferencedImages(orbit,observations,num_observations)
+
+            # break
+
 def my_makedirs(path):
     """
     ディレクトリを作成する
@@ -422,7 +479,7 @@ def plotCenters(img,centers):
     plt.show()
     return
 
-def subCCmapMatrix(observations,templateCenter,num_observations,size_templateX=None,size_templateY=None):
+def subCCmapMatrix(observations,templateCenter,num_observations,size_templateX=None,size_templateY=None,savePath=None):
     """
     相関曲面の計算
 
@@ -446,6 +503,8 @@ def subCCmapMatrix(observations,templateCenter,num_observations,size_templateX=N
         テンプレートエリアの大きさ（経度方向、単位はピクセル）
     size_templateY : int
         テンプレートエリアの大きさ（緯度方向、単位はピクセル）
+    savePath : str
+        生成ファイルを保存するパス
 
     Returns
     -------
@@ -509,7 +568,7 @@ def subCCmapMatrix(observations,templateCenter,num_observations,size_templateX=N
 
     # with open(savePath('subCCmapMatrix')+'.pickle', 'wb') as f:
     #         pickle.dump(subMapList, f, protocol=2)
-    with open(savePath('ccmap')+'.pickle', 'wb') as f:
+    with open(savePath, 'wb') as f:
             pickle.dump(ccmap, f, protocol=2)
 
     return subMapList,ccmap
@@ -637,6 +696,7 @@ def summarizeReferencedImages(orbit,observations,num_observations):
             pickle.dump(df , f, protocol=2)
     return
 
+
 """
 南緯50度〜北緯50度まで80m/sで一定の背景東西風、高緯度での変化はUV,IRでの東西風変化に近い3次関数フィッテイグ
 """
@@ -669,57 +729,5 @@ def summarizeReferencedImages(orbit,observations,num_observations):
 """
 u_angle  = np.array([ 95. for i in  range(90)])
 
-# orbit番号で指定。グループ番号はfor文で回す
-orbits = [i for i in range(79,80,1)]
-for orbit in orbits :
-    print('orbit='+str(orbit))
-    path = 'input/r'+"{0:04d}".format(orbit)+'/*.nc'
-    tempdir = './output/orbit'+"{0:04d}".format(orbit)+'/'
-    my_makedirs(tempdir)
-    ncFileList = sorted(glob.glob(path))
-
-    size_templateX=4*20
-    size_templateY=4*20
-    #一回の相関マップ重ね合わせに使う画像の枚数
-    num_observations = 12
-
-    #特定の時間間隔で連続して撮影されている画像番号を出力
-    sequencesGroup=getSequencesGroup(ncFileList,mimGroupSize = num_observations,intervaltime = 3600,buffer_rate_min = 0.8,buffer_rate_max = 1.2)
-#     print(sequencesGroup)
-
-    for groupNum,selectedGroup in enumerate([sequencesGroup[0]]):
-    # for groupNum,selectedGroup in enumerate(sequencesGroup):
-        observations = getAveragedObservationData(ncFileList,selectedGroup,u_angle,plot=False)
-
-        templateCenters = listTemplateCenter(observations[0]['img'],
-                                             max_delta_hour=8, #重ね合わせているので最大時間幅は12-2*2時間
-                                             size_templateX=size_templateX,
-                                             size_templateY=size_templateY)
-
-        my_makedirs(tempdir+'{0:02d}'.format(groupNum))
-
-        #付属情報保存用
-        row = []
-        for templateCenter in tqdm(templateCenters):
-            savePath = lambda flag : tempdir+'{0:02d}'.format(groupNum)+'/'+flag+str(templateCenter)
-
-            subMapList,ccmap = subCCmapMatrix(observations,templateCenter,num_observations,
-                                                         size_templateX=size_templateX,
-                                                         size_templateY=size_templateY)
-
-
-            plotSubCCmapMatrix(subMapList,savePath=savePath('sub')+'.jpg' )
-            plotCCmap(ccmap,savePath = savePath('cc')+'.jpg')
-
-            #CSVで付属情報の保存
-            paths = [ncFileList[index] for index in [selectedGroup[i] for i in range(num_observations) ] ]
-            row += [ [savePath('cc')+'.jpg',
-                      templateCenter,
-                      paths] ]
-
-            # break
-
-        saveCCmapInfp(orbit,num_observations,groupNum,row,tempdir)
-        summarizeReferencedImages(orbit,observations,num_observations)
-
-        # break
+if __name__ == '__main__':
+    main()
