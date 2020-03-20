@@ -197,15 +197,15 @@ def getAveragedObservationData(ncFileList,sequences,u_angle,plot=False):
 
 
         interval_second = (time-initial_time).days*24*3600+(time-initial_time).seconds
-        # print( displacement_pixcel(interval_second) )
-        # rolled_img = np.roll(img,displacement_pixcel(interval_second), axis=1)
+        # print( displacement_pixel(interval_second) )
+        # rolled_img = np.roll(img,displacement_pixel(interval_second), axis=1)
 
-        displacement_pixcel = lambda U_background,interval_second : int(U_background / 100. * 360 / (2 * np.pi * 6050 / 1440) * interval_second/3600.)
-        rolled_img = np.array([np.roll(strip,displacement_pixcel(U,interval_second)) for strip,U in zip (img,wind_speeds)])
+        displacement_pixel = lambda U_background,interval_second : int(U_background / 100. * 360 / (2 * np.pi * 6050 / 1440) * interval_second/3600.)
+        rolled_img = np.array([np.roll(strip,displacement_pixel(U,interval_second)) for strip,U in zip (img,wind_speeds)])
         mask           = lambda img : ma.masked_greater(ma.masked_less(img,-10),10)
 
     #SRにおける個々のsubsolar_longtitude
-        SR_subsolar_longtitudes += [(subsolar_longtitude+displacement_pixcel(95,interval_second)*360/1440.)%360]
+        SR_subsolar_longtitudes += [(subsolar_longtitude+displacement_pixel(95,interval_second)*360/1440.)%360]
         # print(SR_subsolar_longtitudes[-1],subsolar_longtitude)
 
         observation = {'img' : mask(rolled_img),
@@ -608,7 +608,7 @@ def saveCCmapInfp(orbit,num_observations,groupNum,row,tempdir):
             pickle.dump(df , f, protocol=2)
     return
 
-def summerizeReferencedImages(orbit,observations,num_observations):
+def summarizeReferencedImages(orbit,observations,num_observations):
     """
     重ね合わせに使った画像に関連する情報をpickle形式で保存
     """
@@ -720,6 +720,6 @@ for orbit in orbits :
             # break
 
         saveCCmapInfp(orbit,num_observations,groupNum,row,tempdir)
-        summerizeReferencedImages(orbit,observations,num_observations)
+        summarizeReferencedImages(orbit,observations,num_observations)
 
         # break
