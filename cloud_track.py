@@ -67,7 +67,7 @@ def main():
                 # break
 
             saveCCmapInfp(orbit,num_observations,groupNum,row,tempdir)
-            summarizeReferencedImages(orbit,observations,num_observations)
+            summarizeReferencedImages(orbit,observations,num_observations,groupNum,tempdir)
 
             # break
 
@@ -667,7 +667,7 @@ def saveCCmapInfp(orbit,num_observations,groupNum,row,tempdir):
             pickle.dump(df , f, protocol=2)
     return
 
-def summarizeReferencedImages(orbit,observations,num_observations):
+def summarizeReferencedImages(orbit,observations,num_observations,groupNum,tempdir):
     """
     重ね合わせに使った画像に関連する情報をpickle形式で保存
     """
