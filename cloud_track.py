@@ -133,7 +133,7 @@ def getSequencesGroup(ncFileList,mimGroupSize = 7,intervaltime = 3600,buffer_rat
 
     return seqencesGroup
 
-def getAveragedObservationData(ncFileList,sequences,plot=False):
+def getAveragedObservationData(ncFileList,sequences,u_angle,plot=False):
     """
     複数枚の画像を背景東西風と共に動く座標系で重ね合わせる。ncFileListとsequencesで指定した全ての画像を用いるのではなく、
     ncFileListとsequencesで指定した用いる可能性のある画像のうち金星により近い連続した12枚の画像から連続した4枚の画像を重ね合わせ、
@@ -147,6 +147,9 @@ def getAveragedObservationData(ncFileList,sequences,plot=False):
         対象の輝度温度マップがあるパスのリスト
     sequences　: int
         ncFileListのうち、重ね合わせに用いる可能性のある画像の番号
+    u_angle : ndarray
+        仮定する東西背景風
+        要素数90の1次元配列で、n番目には北（南）緯n~n+1度、(n=0..89)における角速度（赤道上の速度に換算）。単位はm/s。
     plot : bool
         Trueならば重ね合わせた画像を描画
 
@@ -156,31 +159,6 @@ def getAveragedObservationData(ncFileList,sequences,plot=False):
         平均後の画像および撮影時刻や距離の平均などを格納したdictのリスト
 
     """
-    # u_angle  = np.array([ 80.        ,  80.01218624,  80.04876354,  80.10978768,
-    #         80.19535185,  80.305587  ,  80.44066237,  80.60078604,
-    #         80.7862058 ,  80.99721006,  81.23412895,  81.4973356 ,
-    #         81.78724759,  82.10432862,  82.44909035,  82.82209443,
-    #         83.22395487,  83.65534052,  84.11697794,  84.60965449,
-    #         85.1342218 ,  85.69159949,  86.28277941,  86.90883019,
-    #         87.57090228,  88.27023352,  89.00815524,  89.78609901,
-    #         90.60560406,  91.46832543,  92.37604307,  93.33067178,
-    #         94.33427227,  95.38906343,  96.49743588,  97.6619671 ,
-    #         98.8854382 , 100.17085265, 101.52145721, 102.94076527,
-    #        104.43258315, 106.00103947, 107.65061837, 109.38619689,
-    #        111.21308728, 113.13708499, 115.16452317, 117.30233485,
-    #        119.55812399, 121.94024694, 124.45790615, 127.12125833,
-    #        129.72131412, 132.04455686, 134.09497807, 135.87635643,
-    #        137.39226342, 138.6460685 , 139.64094411, 140.37987034,
-    #        140.86563936, 141.10085957, 141.08795951, 140.82919153,
-    #        140.32663524, 139.58220073, 138.59763153, 137.37450746,
-    #        135.91424717, 134.21811056, 132.28720094, 130.12246708,
-    #        127.72470501, 125.09455969, 122.23252645, 119.13895232,
-    #        115.81403716, 112.25783462, 108.47025295, 104.45105564,
-    #        100.19986192,  95.71614708,  90.99924262,  86.04833631,
-    #         80.86247202,  75.44054945,  69.78132368,  63.88340453,
-    #         57.7452559 ,  51.36519476])
-
-    u_angle  = np.array([ 95. for i in  range(90)])
 
     wind_speeds = np.array(list(reversed([ u_angle[int(i/4)] for i in range(360) ])) + [ u_angle[int(i/4)] for i in range(360) ])
     initial_time = getObservationTime(ncFileList[sequences[0]])
@@ -429,53 +407,53 @@ def listTemplateCenter(img,max_delta_hour=None,size_templateX=None,size_template
     return list(itertools.product(cX, cY))
 
 def plotCenters(img,centers):
-        """
-        テンプレートエリアの中心となる座標を決定する
+    """
+    テンプレートエリアの中心となる座標を決定する
 
-        Parameters
-        ----------
-        img : ndarray
-            緯度経度展開された輝度温度マップ
-        centers : list
-            テンプレートエリアの中心座標のリスト
-        """
+    Parameters
+    ----------
+    img : ndarray
+        緯度経度展開された輝度温度マップ
+    centers : list
+        テンプレートエリアの中心座標のリスト
+    """
     plt.scatter(np.array(centers).T[0],np.array(centers).T[1])
     plt.imshow(img)
     plt.show()
     return
 
 def subCCmapMatrix(observations,templateCenter,num_observations,size_templateX=None,size_templateY=None):
-        """
-        相関曲面の計算
+    """
+    相関曲面の計算
 
-        1.  入力した重ね合わせた観測画像群から選んだ任意の2枚の相関曲面を全て計算する。
-            ただし、重ね合わせに用いた画像が被ったペアは計算しない。
+    1.  入力した重ね合わせた観測画像群から選んだ任意の2枚の相関曲面を全て計算する。
+        ただし、重ね合わせに用いた画像が被ったペアは計算しない。
 
-        2.  得られた全相関曲面を、同じ時間間隔ごとに平均。その後に各時間間隔で平均された画像をさらに平均
-            (Ikegawa & Horinouchi 2016)
+    2.  得られた全相関曲面を、同じ時間間隔ごとに平均。その後に各時間間隔で平均された画像をさらに平均
+        (Ikegawa & Horinouchi 2016)
 
-        デフォルトでは12枚の元画像から4枚づつ移動平均を行なって得られた9枚の画像を入力としている。（それ以外のパラメータでの動作は確認していない）
+    デフォルトでは12枚の元画像から4枚づつ移動平均を行なって得られた9枚の画像を入力としている。（それ以外のパラメータでの動作は確認していない）
 
-        Parameters
-        ----------
-        observations : list of ndarray
-            緯度経度展開された輝度温度マップ
-        templateCenter : list
-            テンプレートエリアの中心座標のリスト
-        num_observations : int
-            重ね合わせに用いる元画像の数（12に固定）
-        size_templateX : int
-            テンプレートエリアの大きさ（経度方向、単位はピクセル）
-        size_templateY : int
-            テンプレートエリアの大きさ（緯度方向、単位はピクセル）
+    Parameters
+    ----------
+    observations : list of ndarray
+        緯度経度展開された輝度温度マップ
+    templateCenter : list
+        テンプレートエリアの中心座標のリスト
+    num_observations : int
+        重ね合わせに用いる元画像の数（12に固定）
+    size_templateX : int
+        テンプレートエリアの大きさ（経度方向、単位はピクセル）
+    size_templateY : int
+        テンプレートエリアの大きさ（緯度方向、単位はピクセル）
 
-        Returns
-        -------
-        subMapList : list of ndarray
-            全相関曲面のリスト（手順1の結果）
-        ccmap : ndarray
-            最終的に得られた平均後相関曲面のリスト（手順2の結果）
-        """
+    Returns
+    -------
+    subMapList : list of ndarray
+        全相関曲面のリスト（手順1の結果）
+    ccmap : ndarray
+        最終的に得られた平均後相関曲面のリスト（手順2の結果）
+    """
 
     cX,cY = templateCenter
     # subMapsMatrixを作成
@@ -659,6 +637,38 @@ def summerizeReferencedImages(orbit,observations,num_observations):
             pickle.dump(df , f, protocol=2)
     return
 
+"""
+南緯50度〜北緯50度まで80m/sで一定の背景東西風、高緯度での変化はUV,IRでの東西風変化に近い3次関数フィッテイグ
+"""
+# u_angle  = np.array([ 80.        ,  80.01218624,  80.04876354,  80.10978768,
+#         80.19535185,  80.305587  ,  80.44066237,  80.60078604,
+#         80.7862058 ,  80.99721006,  81.23412895,  81.4973356 ,
+#         81.78724759,  82.10432862,  82.44909035,  82.82209443,
+#         83.22395487,  83.65534052,  84.11697794,  84.60965449,
+#         85.1342218 ,  85.69159949,  86.28277941,  86.90883019,
+#         87.57090228,  88.27023352,  89.00815524,  89.78609901,
+#         90.60560406,  91.46832543,  92.37604307,  93.33067178,
+#         94.33427227,  95.38906343,  96.49743588,  97.6619671 ,
+#         98.8854382 , 100.17085265, 101.52145721, 102.94076527,
+#        104.43258315, 106.00103947, 107.65061837, 109.38619689,
+#        111.21308728, 113.13708499, 115.16452317, 117.30233485,
+#        119.55812399, 121.94024694, 124.45790615, 127.12125833,
+#        129.72131412, 132.04455686, 134.09497807, 135.87635643,
+#        137.39226342, 138.6460685 , 139.64094411, 140.37987034,
+#        140.86563936, 141.10085957, 141.08795951, 140.82919153,
+#        140.32663524, 139.58220073, 138.59763153, 137.37450746,
+#        135.91424717, 134.21811056, 132.28720094, 130.12246708,
+#        127.72470501, 125.09455969, 122.23252645, 119.13895232,
+#        115.81403716, 112.25783462, 108.47025295, 104.45105564,
+#        100.19986192,  95.71614708,  90.99924262,  86.04833631,
+#         80.86247202,  75.44054945,  69.78132368,  63.88340453,
+#         57.7452559 ,  51.36519476])
+
+"""
+赤道で95m/sの剛体回転
+"""
+u_angle  = np.array([ 95. for i in  range(90)])
+
 # orbit番号で指定。グループ番号はfor文で回す
 orbits = [i for i in range(79,80,1)]
 for orbit in orbits :
@@ -677,9 +687,9 @@ for orbit in orbits :
     sequencesGroup=getSequencesGroup(ncFileList,mimGroupSize = num_observations,intervaltime = 3600,buffer_rate_min = 0.8,buffer_rate_max = 1.2)
 #     print(sequencesGroup)
 
-    # for groupNum,selectedGroup in enumerate([sequencesGroup[0]]):
-    for groupNum,selectedGroup in enumerate(sequencesGroup):
-        observations = getAveragedObservationData(ncFileList,selectedGroup,plot=False)
+    for groupNum,selectedGroup in enumerate([sequencesGroup[0]]):
+    # for groupNum,selectedGroup in enumerate(sequencesGroup):
+        observations = getAveragedObservationData(ncFileList,selectedGroup,u_angle,plot=False)
 
         templateCenters = listTemplateCenter(observations[0]['img'],
                                              max_delta_hour=8, #重ね合わせているので最大時間幅は12-2*2時間
