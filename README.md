@@ -7,7 +7,7 @@
 - `cloud_track.py`  緯度経度マッピングされたLIR画像から、相互相関曲面を計算する。(本研究オリジナルの解析手法)
 - `summarize.py`  得られた相互相関曲面から推定風速や観測地点のローカルタイムなどをまとめた統計解析用のcsvファイルを作成する(補助)
 
-本コードは `Windows 10`, `Python 3.6.6`, `Anaconda 4.5.11` で実行できることを確認している。用いた仮想環境にインストールした各ライブラリのバージョンは別途`spec-file.txt`にまとめた。(Windowsであれば、`conda create --name (任意の仮想環境名) --file spec-file.txt`とすれば同様の環境を作ることができるが、筆者の仮想環境をそのままコピーするため、このコードを動かすために必要でないライブラリも同時にインストールされる。anacondaの仮想環境については[Managing environments](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html)を参照)
+本コードは `Windows 10`, `Python 3.6.6`, `Anaconda 4.5.11` で実行できることを確認している。用いた仮想環境にインストールした各ライブラリのバージョンは別途`spec-file.txt`にまとめた。(Windowsであれば、`conda create --name (任意の仮想環境名) --file spec-file.txt`とすれば同様の環境を作ることができるが、このコードを動かすために必要でないライブラリも同時にインストールされる。anacondaの仮想環境については[Managing environments](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html)を参照)
 
 ### cloud_track.py 実行手順
 
