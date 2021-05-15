@@ -1,3 +1,68 @@
+## Cloud tracking using LIR images with averaging of multiple images
+
+*Japanese follows English*
+
+### Overview
+
+The codes perform cloud tracking using thermal infrared images taken by LIR onboard the Venus orbiter Akatsuki. In this method, noises in the images are reduced by averaging multiple images in the coordinate system rotating with the typical background flow. There are two classes of codes that play the following roles.
+
+- `cloud_track.py` : Compute the cross-correlation surface from the latitude-longitude mapped LIR images
+- `summarize.py` : Create csv files for statistical analysis that contain the estimated wind speed and local time of the observation point
+
+This code has been verified on Windows 10, Python 3.6.6, and Anaconda 4.5.11. The versions of each library installed in the virtual environment used are listed in a separate spec-file.txt file. (On Windows, you can create a similar environment by using "conda create --name [virtual environment name] --file spec-file.txt", but it will also install libraries that are not necessary to run this code. For more information about anaconda virtual environments, see [Managing environments](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html))
+
+### Procedure to run cloud_track.py
+
+1. Create a directory `input/` in the directory where the executable code is located.
+
+2. Copy the LIR source file used for cloud tracking into `input/r????`. (???? contains a four-digit orbit number)
+
+   - Supported files are L3c netCDF4 files with latitude/longitude projection. (assuming an image pixel size of 1440 in the longitude direction and 720 in the latitude direction)
+
+   - The file names must remain the same as they were downloaded from the archive. Each file must be placed in a folder with all corresponding orbit numbers. 
+
+   - - Example: `input/r0079/lir_20180410_065612_pic_l3c_v20190401.nc`
+
+3. In `clud_track.py`, replace `orbits = [i for i in range(79,85)]` with a list of orbit numbers to be analyzed. In this example, we use images of orbits 79-84 for cloud tracking. These orbit numbers must be numbers that exist in `input/`.
+
+4. In the directory where the executable code is located, type the command  `python cloud_track.py` to run it. 
+
+5. Once executed, a directory `output/` is created in the directory where the executable code is located, and for each orbit number and each group within the orbit number, csv files containing the cross-correlation surface data (a pickle file containing jpeg images and a two-dimensional array representing the correlation surface), the path to the original data used to create the cross-correlation surface, and the exposure time of the original data are generated. The pickle files are needed when running `summerize.py`. These data are not directly referenced during statistical analysis. 
+   - Example: `output/orbit0079/01/ccmap(806.0, 257.0).pickle`
+
+
+### Procedure to run summarize.py
+
+The code creates csv files for statistical analysis that contain the wind speeds estimated from cross-correlation surfaces and the local times of the observation points. It needs to be run after `cloud_track.py` has been excuted to generate correlation surface data.
+
+1. In `summarize.py`, replace `orbits = [i for i in range(79,85)]` with a list of orbit numbers to be     analyzed. In this example, we use images of orbits 79-84 for cloud tracking. These orbit numbers must be numbers that exist in `output/`.
+2. In the directory where the executable code is located, type the command `python summarize.py` to run it. 
+3. Once executed, two files for statistical analysis, `summaryCCmap__????.csv` and `.pickle`, are generated. These files are different in format and contain the same information. These files contain values characterizing cross-correlation surfaces and the associated metadata. 
+
+#### Contents of the file for statistical analysis
+
+| **Name**                    | **Explanation**                                              | **Unit**                                                     |
+| --------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| (#)                         | Line  number                                                 |                                                              |
+| orbit                       | Orbit  number                                                |                                                              |
+| groupNum                    | Group  number in the orbit                                   |                                                              |
+| u                           | Zonal  velocity that maximizes the cross-correlation coefficient | m/s  : A value obtained by subtracting the assumed background zonal velocity from  the zonal velocity and dividing it by cosθ (θ is latitude). This quantity is  proportional to the angular velocity. |
+| v                           | Meridional  velocity velocity that maximizes the cross-correlation coefficient | m/s                                                          |
+| lt                          | Average  of the local times of the images used               | hour                                                         |
+| lat                         | Average  of the latitudes of the images used                 | degree                                                       |
+| lon                         | Average  of the longitudes of the images used                | degree                                                       |
+| time_begin                  | The  time of the first image used                            |                                                              |
+| distance_mean               | Average  distance between Venus and the spacecraft           | 1e4  km                                                      |
+| maxValue                    | Maximum  cross-correlation coefficient                       |                                                              |
+| region  x (x=99,95,90)      | The  number of pixels in the cross-correlation surface that have top 100-x %  correlation coefficients |                                                              |
+| longestAxes  x (x=99,95,90) | The  major axis of the region in the cross-correlation surface that has top 100-x  % correlation coefficients | pixel/h  (Number of pixels in the cross-correlation surface) |
+| path                        | Path  to the cross-correlation data                          |                                                              |
+
+
+
+
+---
+
 ## 画像の重ね合わせによるLIR雲追跡の実行方法
 
 
