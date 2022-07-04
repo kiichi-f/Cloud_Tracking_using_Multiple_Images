@@ -5,6 +5,7 @@
 git clone git@github.com:kiichi-f/Cloud_Tracking_using_Multiple_Images.git
 ```
 - anacondaでライブラリインストール (コマンド例...`spec-file.txt`はバージョンが古いです。)
+  - 依存ライブラリであるopencvの関数 `cv2.findContours` の返り値はバージョンによって異なるようです。[こちら](https://github.com/kiichi-f/Cloud_Tracking_using_Multiple_Images/commit/58960ea88651dd3652b94b0c4dbcb2d73a80ff56)で現在のバージョンに更新しています。 
 ```sh
 conda create -n demo_cloud_track python=3.8 numpy jupyter matplotlib pandas tqdm
 conda install -c conda-forge opencv
