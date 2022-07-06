@@ -1,6 +1,7 @@
 ### 1. `git clone` と 仮想環境作成
 - github https://github.com/kiichi-f/Cloud_Tracking_using_Multiple_Images
     - 1軌道分のサンプルの入力ファイルも含まれています: `Cloud_Tracking_using_Multiple_Images/input/r0079`
+    - 1.5GBほどあるのでダウンロードに数分かかる場合があります。
 ```sh
 git clone git@github.com:kiichi-f/Cloud_Tracking_using_Multiple_Images.git
 ```
