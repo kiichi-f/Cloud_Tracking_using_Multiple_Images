@@ -76,7 +76,7 @@ def recoedFitedEllipse(ccmap,detected_ellipses=[],threshold = 99):
     upper_ = lambda ccmap,parcent : np.sort(ccmap.reshape((1,np.array(ccmap).size)))[0][int(parcent/100.*np.array(ccmap).size)]
      #輪郭検出のための前処理：2値化
     _, binaryMap = cv2.threshold(ccmap,upper_(ccmap,threshold),1,cv2.THRESH_BINARY)
-    _, contours, _ = cv2.findContours(binaryMap.astype('u1'),cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(binaryMap.astype('u1'),cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
 
     #楕円近似
     for conter in contours:
