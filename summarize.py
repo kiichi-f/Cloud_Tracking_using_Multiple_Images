@@ -129,7 +129,7 @@ if __name__ == '__main__':
                     cX,cY = float(pathCCmap[a+1:b]),float(pathCCmap[b+1:c])
 
                     cLON,cLAT = cX/1440 * 360, (360-cY)/360 * 90
-                    cLT = (cLON - subsolar_SRlongtitude)%360 / 15
+                    cLT = (subsolar_SRlongtitude - cLON + 180)%360 / 15
 
                     with open(pathCCmap,'rb') as f:
                         ccmap = pickle.load(f)
