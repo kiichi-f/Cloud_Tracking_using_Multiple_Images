@@ -237,12 +237,11 @@ def getAveragedObservationData(ncFileList,sequences,u_angle,plot=False):
 
         ncData = netCDF4.Dataset(ncFileList[num], 'r')
 
-        #番地が小さい方が南なので、y方向は反転して、北が上になるように読み込み
         btemp = ncData.variables['btemp'][0]
         if btemp.shape == (1440,2880) :
-            img = high_pass_filtering(btemp[::-2,::2],size=65)
+            img = high_pass_filtering(btemp[::2,::2],size=65)
         elif btemp.shape == (720,1440) :
-            img = high_pass_filtering(btemp[::-1,:],size=65)
+            img = high_pass_filtering(btemp,size=65)
 
         time = getObservationTime(ncFileList[num])
         rolled_img = img
